@@ -57,90 +57,52 @@ public class SeamCarver {
 
   // sequence of indices for horizontal seam
   public int[] findHorizontalSeam() {
-    EdgeWeightedDigraph horizontaldG = findHorizontalDG();
-
-    double minimumDistance = Double.POSITIVE_INFINITY;
-    int start = 0;
-    int end = 0;
-    for (int i = 0; i < height(); i++) {
-      AcyclicSP sp = new AcyclicSP(horizontaldG, i);
-      for (int j = 0; j < width(); j++) {
-        if (sp.distTo(width() * height() - 1 - j) < minimumDistance) {
-          minimumDistance = sp.distTo(width() * height() - 1 - j);
-          start = i;
-          end = width() * height() - 1 - j;
+    int[] seam = new int[width()];
+    for (int x = 0; x < width(); x++) {
+      double minEnergy = Double.POSITIVE_INFINITY;
+      int yMin = 0;
+      for (int y = 0; y < height(); y++) {
+        if (x == 0 || x == 1) {
+          if (energy(x, y) < minEnergy) {
+            minEnergy = energy(x, y);
+            yMin = y;
+          }
+        } else if (y + 1 == seam[x - 1] || y == seam[x - 1] || y - 1 == seam[x - 1]) {
+          if (energy(x, y) < minEnergy) {
+            minEnergy = energy(x, y);
+            yMin = y;
+          }
         }
       }
+      seam[x] = yMin;
     }
-    AcyclicSP sp = new AcyclicSP(horizontaldG, start);
-    int[] seams = new int[width()];
-    int count = 0;
-    for (DirectedEdge d : sp.pathTo(end)) {
-      seams[count] = d.from() % height();
-      count++;
-    }
-    seams[width() - 1] = end % height();
-    return seams;
+    seam[0] = seam[1];
+    return seam;
   }
 
   // sequence of indices for vertical seam
   public int[] findVerticalSeam() {
-    EdgeWeightedDigraph verticaldG = findVerticalDG();
-    double minimumDistance = Double.POSITIVE_INFINITY;
-    int start = 0;
-    int end = 0;
-    for (int i = 0; i < width(); i++) {
-    AcyclicSP sp = new AcyclicSP(verticaldG, i);
-      for (int j = 0; j < width(); j++) {
-        if (sp.distTo(width() * height() - 1 - j) < minimumDistance) {
-          minimumDistance = sp.distTo(width() * height() - 1 - j);
-          start = i;
-          end = width() * height() - 1 - j;
+    int[] seam = new int[height()];
+    for (int y = 0; y < height(); y++) {
+      double minEnergy = Double.POSITIVE_INFINITY;
+      int xMin = 0;
+      for (int x = 0; x < width(); x++) {
+        if (y == 0 || y == 1) {
+          if (energy(x, y) < minEnergy) {
+            minEnergy = energy(x, y);
+            xMin = x;
+          }
+        } else if (x + 1 == seam[y - 1] || x == seam[y - 1] || x - 1 == seam[y - 1]) {
+          if (energy(x, y) < minEnergy) {
+            minEnergy = energy(x, y);
+            xMin = x;
+          }
         }
       }
+      seam[y] = xMin;
     }
-    AcyclicSP sp = new AcyclicSP(verticaldG, start);
-    int[] seams = new int[height()];
-    int count = 0;
-    for (DirectedEdge d : sp.pathTo(end)) {
-      seams[count] = d.from() % width();
-      count++;
-    }
-    seams[height() - 1] = end % width();
-    return seams;
-  }
-
-  private EdgeWeightedDigraph findVerticalDG() {
-    EdgeWeightedDigraph verticaldG = new EdgeWeightedDigraph(width() * height());
-    for (int i = 0; i < width() * (height() - 1); i++) {
-      verticaldG.addEdge(new DirectedEdge(i, i + width(), energy((i + width()) % width(), (i + width()) / width())));
-      if (i % width() == 0) {
-        verticaldG.addEdge(new DirectedEdge(i, i + width() + 1, energy((i + width() + 1) % width(), (i + width() + 1) / width())));
-      } else if (i % width() == width() - 1) {
-        verticaldG.addEdge(new DirectedEdge(i, i + width() - 1, energy((i + width() - 1) % width(), (i + width() - 1) / width())));
-
-      } else {
-        verticaldG.addEdge(new DirectedEdge(i, i + width() + 1, energy((i + width() + 1) % width(), (i + width() + 1) / width())));
-        verticaldG.addEdge(new DirectedEdge(i, i + width() - 1, energy((i + width() - 1) % width(), (i + width() - 1) / width())));
-      }
-    }
-    return verticaldG;
-  }
-
-  private EdgeWeightedDigraph findHorizontalDG() {
-    EdgeWeightedDigraph horizontaldG = new EdgeWeightedDigraph(width() * height());
-    for (int i = 0; i < height() * (width() - 1); i++) {
-      horizontaldG.addEdge(new DirectedEdge(i, i + height(), energy((i + height()) % height(), (i + height()) / height())));
-      if (i % height() == 0) {
-        horizontaldG.addEdge(new DirectedEdge(i, i + height() + 1, energy((i + height() + 1) % height(), (i + height() + 1) / height())));
-      } else if (i % height() == height() - 1) {
-        horizontaldG.addEdge(new DirectedEdge(i, i + height() - 1, energy((i + height() - 1) % height(), (i + height() - 1) / height())));
-      } else {
-        horizontaldG.addEdge(new DirectedEdge(i, i + height() + 1, energy((i + height() + 1) % height(), (i + height() + 1) / height())));
-        horizontaldG.addEdge(new DirectedEdge(i, i + height() - 1, energy((i + height() - 1) % height(), (i + height() - 1) / height())));
-      }
-    }
-    return horizontaldG;
+    seam[0] = seam[1];
+    return seam;
   }
 
   // remove horizontal seam from current picture
@@ -150,17 +112,19 @@ public class SeamCarver {
     } else if (seam.length != width()) {
       throw new IllegalArgumentException("Array incorrect size");
     }
-    Picture oldPicture = picture;
-    picture = new Picture(width(), height() - 1);
-    for (int x = 0; x < height(); x++) {
-      for (int y = 0; y < width(); y++) {
-        if (x < seam[y]) {
-          picture.setRGB(x, y, oldPicture.getRGB(x, y));
-        } else if (x > seam[y]) {
-          picture.setRGB(x, y, oldPicture.getRGB(x, y + 1));
+
+    Picture newPicture = new Picture(width(), height() - 1);
+    for (int x = 0; x < newPicture.width(); x++) {
+      for (int y = 0; y < newPicture.height(); y++) {
+        if (y < seam[x]) {
+          newPicture.setRGB(x, y, picture.getRGB(x, y));
+        } else {
+          newPicture.setRGB(x, y, picture.getRGB(x, y + 1));
         }
       }
     }
+
+    picture = newPicture;
   }
 
   // remove vertical seam from current picture
@@ -170,17 +134,19 @@ public class SeamCarver {
     } else if (seam.length != height()) {
       throw new IllegalArgumentException("Array incorrect size");
     }
-    Picture oldPicture = picture;
-    picture = new Picture(width() - 1, height());
-    for (int x = 0; x < width(); x++) {
-      for (int y = 0; y < height(); y++) {
+
+    Picture newPicture = new Picture(width() - 1, height());
+    for (int y = 0; y < newPicture.height(); y++) {
+      for (int x = 0; x < newPicture.width(); x++) {
         if (x < seam[y]) {
-          picture.setRGB(x, y, oldPicture.getRGB(x, y));
-        } else if (x > seam[y]) {
-          picture.setRGB(x, y, oldPicture.getRGB(x + 1, y));
+          newPicture.setRGB(x, y, picture.getRGB(x, y));
+        } else {
+          newPicture.setRGB(x, y, picture.getRGB(x + 1, y));
         }
       }
     }
+
+    picture = newPicture;
   }
 
   //  unit testing (optional)
