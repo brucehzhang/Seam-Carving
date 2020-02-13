@@ -1,12 +1,10 @@
-import edu.princeton.cs.algs4.AcyclicSP;
-import edu.princeton.cs.algs4.DirectedEdge;
-import edu.princeton.cs.algs4.EdgeWeightedDigraph;
 import edu.princeton.cs.algs4.Picture;
 import java.awt.Color;
 
 
 public class SeamCarver {
   private Picture picture;
+  private Picture original;
 
   // create a seam carver object based on the given picture
   public SeamCarver(Picture picture) {
@@ -14,6 +12,7 @@ public class SeamCarver {
       throw new IllegalArgumentException("Argument is null");
     }
     this.picture = new Picture(picture);
+    this.original = picture;
   }
 
   // current picture
@@ -58,50 +57,120 @@ public class SeamCarver {
   // sequence of indices for horizontal seam
   public int[] findHorizontalSeam() {
     int[] seam = new int[width()];
-    for (int x = 0; x < width(); x++) {
-      double minEnergy = Double.POSITIVE_INFINITY;
-      int yMin = 0;
-      for (int y = 0; y < height(); y++) {
-        if (x == 0 || x == 1) {
-          if (energy(x, y) < minEnergy) {
-            minEnergy = energy(x, y);
-            yMin = y;
-          }
-        } else if (y + 1 == seam[x - 1] || y == seam[x - 1] || y - 1 == seam[x - 1]) {
-          if (energy(x, y) < minEnergy) {
-            minEnergy = energy(x, y);
-            yMin = y;
+
+    if (width() == 1 || width() == 2) {
+      for (int i = 0; i < width(); i++) {
+        seam[i] = 0;
+      }
+      return seam;
+    } else if (height() == 1) {
+      for (int i = 0; i < width(); i++) {
+        seam[i] = 0;
+      }
+    }
+
+    double[][] distTo = new double[width()][height()];
+    int[][] edgeTo = new int[width()][height()];
+
+    for (int i = 0; i < width(); i++) {
+      for (int j = 0; j < height(); j++) {
+        if (i == 0) {
+          distTo[i][j] = 1000;
+        } else {
+          distTo[i][j] = Double.POSITIVE_INFINITY;
+        }
+      }
+    }
+
+    for (int i = 0; i < width() - 1; i++) {
+      for (int j = 0; j < height(); j++) {
+        for (int adj = -1; adj < 2; adj++) {
+          if (j + adj >= 0 && j + adj <= height() - 1) {
+            if (distTo[i + 1][j + adj] > distTo[i][j] + energy(i + 1, j + adj)) {
+              distTo[i + 1][j + adj] = distTo[i][j] + energy(i + 1, j + adj);
+              edgeTo[i + 1][j + adj] = j * width() + i;
+            }
           }
         }
       }
-      seam[x] = yMin;
     }
-    seam[0] = seam[1];
+
+    double shortestDistance = Double.POSITIVE_INFINITY;
+    int shortestIndex = 0;
+
+    for (int j = 0; j < height(); j++) {
+      if (distTo[width() - 1][j] < shortestDistance) {
+        shortestDistance = distTo[width() - 1][j];
+        shortestIndex = (width() - 1) + width() * j;
+      }
+    }
+
+    int currentIndex = shortestIndex;
+    for (int i = width() - 1; i >= 0; i--) {
+      seam[i] = currentIndex / width();
+      currentIndex = edgeTo[currentIndex % width()][currentIndex / width()];
+    }
+
     return seam;
   }
 
   // sequence of indices for vertical seam
   public int[] findVerticalSeam() {
     int[] seam = new int[height()];
-    for (int y = 0; y < height(); y++) {
-      double minEnergy = Double.POSITIVE_INFINITY;
-      int xMin = 0;
-      for (int x = 0; x < width(); x++) {
-        if (y == 0 || y == 1) {
-          if (energy(x, y) < minEnergy) {
-            minEnergy = energy(x, y);
-            xMin = x;
-          }
-        } else if (x + 1 == seam[y - 1] || x == seam[y - 1] || x - 1 == seam[y - 1]) {
-          if (energy(x, y) < minEnergy) {
-            minEnergy = energy(x, y);
-            xMin = x;
+
+    if (height() == 1 || height() == 2) {
+      for (int i = 0; i < height(); i++) {
+        seam[i] = 0;
+      }
+      return seam;
+    } else if (width() == 1) {
+      for (int i = 0; i < height(); i++) {
+        seam[i] = 0;
+      }
+    }
+
+    double[][] distTo = new double[width()][height()];
+    int[][] edgeTo = new int[width()][height()];
+
+    for (int i = 0; i < width(); i++) {
+      for (int j = 0; j < height(); j++) {
+        if (j == 0) {
+          distTo[i][j] = 1000;
+        } else {
+          distTo[i][j] = Double.POSITIVE_INFINITY;
+        }
+      }
+    }
+
+    for (int j = 0; j < height() - 1; j++) {
+      for (int i = 0; i < width(); i++) {
+        for (int adj = -1; adj < 2; adj++) {
+          if (i + adj >= 0 && i + adj <= width() - 1) {
+            if (distTo[i + adj][j + 1] > distTo[i][j] + energy(i + adj, j + 1)) {
+              distTo[i + adj][j + 1] = distTo[i][j] + energy(i + adj, j + 1);
+              edgeTo[i + adj][j + 1] = j * width() + i;
+            }
           }
         }
       }
-      seam[y] = xMin;
     }
-    seam[0] = seam[1];
+
+    double shortestDistance = Double.POSITIVE_INFINITY;
+    int shortestIndex = 0;
+
+    for (int i = 0; i < width(); i++) {
+      if (distTo[i][height() - 1] < shortestDistance) {
+        shortestDistance = distTo[i][height() - 1];
+        shortestIndex = i + width() * (height() - 1);
+      }
+    }
+
+    int currentIndex = shortestIndex;
+    for (int i = height() - 1; i >= 0; i--) {
+      seam[i] = currentIndex % width();
+      currentIndex = edgeTo[currentIndex % width()][currentIndex / width()];
+    }
+
     return seam;
   }
 
@@ -111,6 +180,18 @@ public class SeamCarver {
       throw new IllegalArgumentException("Argument is null");
     } else if (seam.length != width()) {
       throw new IllegalArgumentException("Array incorrect size");
+    }
+
+    if (seam.length == 1) {
+      if (seam[0] < 0 || seam[0] >= height()) {
+        throw new IllegalArgumentException("Invalid seam");
+      }
+    }
+
+    for (int i = 0; i < seam.length - 1; i++) {
+      if (Math.abs(seam[i] - seam[i + 1]) > 1 || seam[i] < 0 || seam[i + 1] < 0 || seam[i] >= height() || seam[i + 1] >= height()) {
+        throw new IllegalArgumentException("Invalid seam");
+      }
     }
 
     Picture newPicture = new Picture(width(), height() - 1);
@@ -133,6 +214,18 @@ public class SeamCarver {
       throw new IllegalArgumentException("Argument is null");
     } else if (seam.length != height()) {
       throw new IllegalArgumentException("Array incorrect size");
+    }
+
+    if (seam.length == 1) {
+      if (seam[0] < 0 || seam[0] >= height()) {
+        throw new IllegalArgumentException("Invalid seam");
+      }
+    }
+
+    for (int i = 0; i < seam.length - 1; i++) {
+      if (Math.abs(seam[i] - seam[i + 1]) > 1 || seam[i] < 0 || seam[i + 1] < 0 || seam[i] >= width() || seam[i + 1] >= width()) {
+        throw new IllegalArgumentException("Invalid seam");
+      }
     }
 
     Picture newPicture = new Picture(width() - 1, height());
